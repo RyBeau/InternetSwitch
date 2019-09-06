@@ -1,6 +1,7 @@
-import subprocess
+import subprocess, ctypes, sys, pickle, os
 from tkinter import *
 
+FILENAME = 'stored.interfaces'
 INTERFACE_OBJECTS = None
 
 class NetworkInterface:
@@ -96,10 +97,15 @@ class GUI:
                                     command= lambda x = item: self.switch(x)
                                     ,width=10,bg="Alice Blue",
                                     activebackground="Alice Blue").pack(pady=5))
+        setup_button = Button(button_frame_1,text="Setup",
+                                    command= lambda: re_run_setup(self.root)
+                                    ,width=10,bg="Alice Blue",
+                                    activebackground="Alice Blue").pack(pady=5)
         exit_button = Button(button_frame_1,text="Exit",
                              command= self.quit,bg="Alice Blue",
                              activebackground="Alice Blue",
                              width=10).pack(pady=5)
+        
         button_frame_1.pack(padx=5)
 
     def switch(self, interface):
@@ -109,7 +115,12 @@ class GUI:
             self.current_interface = interface
             self.status.configure(text= self.current_interface.name)
 
+    def store_interfaces(self):
+        with open(FILENAME, 'wb+') as INTERFACE_OBJECTS_file:
+            pickle.dump(self.interface_objects, INTERFACE_OBJECTS_file)
+
     def quit(self):
+        self.store_interfaces()
         for item in self.interface_objects :
             if item.state is False:
                 item._on()
@@ -131,7 +142,38 @@ def first_setup():
     start = Setup(window)
     window.configure(background='Alice Blue',borderwidth=2,relief=SOLID)
     window.mainloop()
-    
+
+def re_run_setup(root):
+    try:
+        os.remove(FILENAME)
+    except:
+        root.destroy()
+        run_as_admin()
+    else:
+        root.destroy()
+        run_as_admin()        
+        
+def check_admin():
+    try:
+        return ctypes.windll.shell32.IsUserAnAdmin()
+    except:
+        return False
+
+def load_interfaces():
+    with open(FILENAME, 'rb') as INTERFACE_OBJECTS_file:
+        interfaces = pickle.load(INTERFACE_OBJECTS_file)    
+    return interfaces
+
+def run_as_admin():
+    ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, __file__, None, 1)
+
 if __name__ == "__main__":
-    first_setup()
-    main()
+    if check_admin():
+        if os.path.exists(FILENAME):
+            INTERFACE_OBJECTS = load_interfaces()
+            main()            
+        else:
+            first_setup()
+            main()            
+    else:
+        run_as_admin()
