@@ -1,11 +1,25 @@
+"""
+Author: Ryan Beaumont
+Compatability: Windows 10
+"""
 import subprocess, ctypes, sys, pickle, os
 from tkinter import *
 
+"""File name of the persitant file used to store the interfaces"""
 FILENAME = 'stored.interfaces'
+"""Global list of the interface objects"""
 INTERFACE_OBJECTS = None
 
 class NetworkInterface:
+    """
+    This class defines a Network Interface object. A Network Interface has a state,
+    name and command line.
+    """
     def __init__(self, name):
+        """
+        Initialising all of variables for the Network Interface. Then setting the 
+        initial off state by call self._off()
+        """
         self.state = True
         self.name = name
         self.command = 'netsh interface set interface ' + '"{}"'.format(name)        
@@ -13,17 +27,32 @@ class NetworkInterface:
 
     
     def _off(self):
+        """This method uses the command line for the interface to disable the
+        the Network Interface, It then updates the state of the adapter to False
+        to reflect this change"""
         string = self.command + " Disable"
         subprocess.call(string)
         self.state = False
     
     def _on(self):
+        """This method uses the command line for the interface to enable the
+        the Network Interface, It then updates the state of the adapter to True
+        to reflect this change"""
         string = self.command + " Enable"
         subprocess.call(string)
         self.state = True
         
 class Setup:
+    """
+    This class defines the Setup window which the user will use in the case
+    of first setup. From this window the select with Network Interfaces they would
+    like to be able to control using the program.
+    """
     def __init__(self, window):
+        """
+        Initialising the window and getting the list of network adapters installed
+        on the system.
+        """
         self.window = window
         self.network_interfaces = self.get_interfaces()
         self.title = Label(window, text="Select the Network Interfaces to Control",
@@ -43,6 +72,12 @@ class Setup:
                          activebackground="Alice Blue").pack(pady=5)
         
     def get_interfaces(self):
+        """
+        This method uses the cmd command defined in cmd to receive a list of 
+        Network Adapters from the cmd window. It then uses the data from the window
+        and then extracts the names of the Network Adapters from the output of the
+        cmd window. The names are returned in a list.
+        """
         cmd = 'netsh interface show interface'
         p = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
         (output, _) = p.communicate()
@@ -60,6 +95,11 @@ class Setup:
     
 
     def set_interfaces(self):
+        """
+        This method creates the list of Network Adapter names to be turned into
+        Network Adapter Objects as selected by the user. This then sends this list
+        to self.store() to create the Network Adapter Objects.
+        """
         values = []
         for chk in self.checkboxes:
             values.append(chk.get())
@@ -74,6 +114,10 @@ class Setup:
        
     
     def store(self,chosen_interfaces):
+        """
+        This method creates the Network Adapter Objects and the stores them
+        in the global interface list for usage in the rest of the program.
+        """
         interface_objects = []
         for item in chosen_interfaces:
             interface_objects.append(NetworkInterface(item))
@@ -138,12 +182,19 @@ def main():
     root.mainloop()
 
 def first_setup():
+    """
+    Begins the first setup process.
+    """
     window = Tk()
     start = Setup(window)
     window.configure(background='Alice Blue',borderwidth=2,relief=SOLID)
     window.mainloop()
 
 def re_run_setup(root):
+    """
+    This function reruns setup as by removing FILENAME and then restarting the 
+    program.
+    """
     try:
         os.remove(FILENAME)
     except:
@@ -154,17 +205,24 @@ def re_run_setup(root):
         run_as_admin()        
         
 def check_admin():
+    """
+    Checks that the program is being run as admin or calls run_as_admin.
+    """
     try:
         return ctypes.windll.shell32.IsUserAnAdmin()
     except:
         return False
 
 def load_interfaces():
+    """
+    Loads the interfaces stored in FILENAME
+    """
     with open(FILENAME, 'rb') as INTERFACE_OBJECTS_file:
         interfaces = pickle.load(INTERFACE_OBJECTS_file)    
     return interfaces
 
 def run_as_admin():
+    """Runs the program as admin"""
     ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, __file__, None, 1)
 
 if __name__ == "__main__":
